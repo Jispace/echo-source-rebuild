@@ -10,15 +10,27 @@ interface BookingModalProps {
   initialPlan?: string;
 }
 
-// Candya's weekly slots (East Africa Time, UTC+3). Key = UTC weekday (2=Tue, 3=Wed, 4=Thu).
+const pad = (n: number) => String(n).padStart(2, '0');
+const SLOT_MINUTES = 20;
+
+/** Consecutive 20-minute slots between start and end hour (EAT). */
+function makeSlots(startH: number, endH: number) {
+  const out: string[] = [];
+  for (let m = startH * 60; m + SLOT_MINUTES <= endH * 60; m += SLOT_MINUTES) {
+    const e = m + SLOT_MINUTES;
+    out.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)} - ${pad(Math.floor(e / 60))}:${pad(e % 60)}`);
+  }
+  return out;
+}
+
+// Candya's weekly availability (East Africa Time, UTC+3). Key = weekday (2=Tue, 3=Wed, 4=Thu).
 const WEEKLY_SLOTS: Record<number, { label: string; hours: string; slots: string[] }> = {
-  2: { label: 'Mardi', hours: '08:00 - 12:00', slots: ['08:30 - 08:50', '09:30 - 09:50', '10:30 - 10:50', '11:15 - 11:35'] },
-  3: { label: 'Mercredi', hours: '09:00 - 15:00', slots: ['09:30 - 09:50', '11:00 - 11:20', '13:00 - 13:20', '14:15 - 14:35'] },
-  4: { label: 'Jeudi', hours: '09:00 - 12:00', slots: ['09:15 - 09:35', '10:15 - 10:35', '11:00 - 11:20', '11:35 - 11:55'] },
+  2: { label: 'Mardi', hours: '08:00 - 12:00', slots: makeSlots(8, 12) },
+  3: { label: 'Mercredi', hours: '09:00 - 15:00', slots: makeSlots(9, 15) },
+  4: { label: 'Jeudi', hours: '09:00 - 12:00', slots: makeSlots(9, 12) },
 };
 const EAT_OFFSET_MS = 3 * 3600 * 1000;
 const MONTHS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-const pad = (n: number) => String(n).padStart(2, '0');
 
 interface DayOption { key: string; label: string; date: string; hours: string; slots: string[] }
 

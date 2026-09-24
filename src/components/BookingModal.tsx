@@ -41,7 +41,7 @@ function slotStartMs(dayKey: string, slot: string) {
 }
 
 /** Next working days (Tue/Wed/Thu) that still have at least one future slot. */
-function buildUpcomingDays(nowMs: number, count = 6): DayOption[] {
+function buildUpcomingDays(nowMs: number, count = 3): DayOption[] {
   const days: DayOption[] = [];
   const eatNow = new Date(nowMs + EAT_OFFSET_MS);
   for (let i = 0; i < 28 && days.length < count; i++) {
@@ -279,6 +279,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                     <label className="text-xs font-bold text-[#473B30] uppercase tracking-wider block">
                       2. Choisissez le jour
                     </label>
+                    <span className="text-[10px] font-medium text-[#7A695B]">
+                      Aujourd'hui : {(() => { const d = new Date(nowMs + EAT_OFFSET_MS); return `${['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`; })()}
+                    </span>
                     <span className="w-fit text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       East Africa Time
                     </span>

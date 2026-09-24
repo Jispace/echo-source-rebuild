@@ -110,7 +110,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
 
         {/* Project Selector Tabs */}
         <div className="relative flex items-center gap-2">
-          <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentProject(-1)} aria-label="Projet précédent" className="shrink-0 rounded-full border-[#DED3C5] bg-white text-[#4A3F35] shadow-sm hover:bg-[#F3EDE4]">
+          <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentProject(-1)} aria-label="Projet précédent" className="hidden sm:inline-flex shrink-0 rounded-full border-[#DED3C5] bg-white text-[#4A3F35] shadow-sm hover:bg-[#F3EDE4]">
             <ChevronLeft />
           </Button>
           <div ref={selectorRef} className="-mx-4 flex flex-1 snap-x items-center justify-start overflow-x-auto px-4 pb-4 gap-2.5 sm:mx-0 sm:justify-center sm:px-0 sm:gap-3 scrollbar-none">
@@ -137,17 +137,20 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
             );
           })}
           </div>
-          <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentProject(1)} aria-label="Projet suivant" className="shrink-0 rounded-full border-[#DED3C5] bg-white text-[#4A3F35] shadow-sm hover:bg-[#F3EDE4]">
+          <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentProject(1)} aria-label="Projet suivant" className="hidden sm:inline-flex shrink-0 rounded-full border-[#DED3C5] bg-white text-[#4A3F35] shadow-sm hover:bg-[#F3EDE4]">
             <ChevronRight />
           </Button>
         </div>
-        <div className="mb-7 min-h-4 sm:mb-10 sm:min-h-0">
-          {selectorOverflows && (
-            <p className="text-center text-[11px] font-medium text-[#7A695B] sm:hidden" aria-label="Faites glisser horizontalement pour voir les autres projets">
-              ← Glisser pour voir plus →
-            </p>
-          )}
+        <div className="mb-7 flex items-center justify-center gap-3 sm:mb-10 sm:hidden">
+          <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentProject(-1)} aria-label="Projet précédent" className="h-8 w-8 shrink-0 rounded-full border-[#DED3C5] bg-white text-[#4A3F35] shadow-sm hover:bg-[#F3EDE4]">
+            <ChevronLeft />
+          </Button>
+          <p className="text-center text-[11px] font-medium text-[#7A695B]">Glisser pour voir plus</p>
+          <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentProject(1)} aria-label="Projet suivant" className="h-8 w-8 shrink-0 rounded-full border-[#DED3C5] bg-white text-[#4A3F35] shadow-sm hover:bg-[#F3EDE4]">
+            <ChevronRight />
+          </Button>
         </div>
+        <div className="hidden sm:block sm:mb-10" />
 
         {/* Featured Project Showcase Container */}
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E7E0D5] shadow-lg shadow-[#2D241E]/5 overflow-hidden transition-all">
@@ -172,7 +175,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
             </div>
 
             {/* Action buttons: Voir le détail ⌵ & Plein écran ↗ */}
-            <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center shrink-0">
+            <div className="flex items-center shrink-0">
               <button
                 type="button"
                 onClick={() => setIsDetailsOpen((prev) => !prev)}
@@ -191,21 +194,13 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
                 />
               </button>
 
-              <button
-                type="button"
-                onClick={() => setZoomedScreenshot({ project: currentProject, screenshot: currentScreenshot })}
-                className="inline-flex min-w-0 items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl bg-white border border-[#E2DAD0] text-[#4A3F35] hover:bg-[#FAF7F2] hover:border-[#D5C8B8] text-xs font-semibold transition-all cursor-pointer shadow-2xs"
-                title="Ouvrir le visualiseur interactif en plein écran"
-              >
-                <span>Plein écran</span>
-                <ArrowUpRight className="w-3.5 h-3.5 text-[#7A583E]" />
-              </button>
+
             </div>
           </div>
 
           {/* Interactive Screen Viewer (Window style) */}
           <div className="p-2.5 sm:p-6 lg:p-8 bg-[#F9F7F3]/50">
-            <div className="overflow-hidden rounded-2xl border border-[#DED4C8] bg-white shadow-[0_18px_50px_rgba(68,52,38,0.09)]">
+            <div className="group/card overflow-hidden rounded-2xl border border-[#DED4C8] bg-white shadow-[0_18px_50px_rgba(68,52,38,0.09)]">
               {/* Window Title Bar */}
               <div className="flex items-center justify-center border-b border-[#EAE3D8] bg-[#F4EFE8] px-3 py-3 sm:justify-end sm:px-4">
                 {/* Switcher for Views */}
@@ -228,20 +223,12 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
                     );
                   })}
 
-                  {/* Zoom Fullscreen Button */}
-                  <button
-                    type="button"
-                    onClick={() => setZoomedScreenshot({ project: currentProject, screenshot: currentScreenshot })}
-                    title="Agrandir la capture en plein écran"
-                    className="p-1.5 rounded-lg bg-white border border-[#E8E1D5] hover:bg-[#F2ECE4] text-[#5C4D3E] transition-colors cursor-pointer ml-1"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                  </button>
+                  
                 </div>
               </div>
 
               {/* Window Body: Images de l'aperçu */}
-              <div className="group relative flex min-h-[240px] items-center justify-center overflow-hidden bg-[#EDE7DE] p-2 sm:min-h-[460px] sm:p-5">
+              <div className="group relative flex min-h-[200px] items-center justify-center overflow-hidden bg-[#EDE7DE] p-2 sm:min-h-[460px] sm:p-5">
                 {!loadedImages[currentScreenshot.id] && !imgErrors[currentScreenshot.id] && (
                   <div className="absolute inset-0 z-10 grid place-items-center bg-[#F2EDE6]" role="status" aria-label="Chargement de l’image">
                     <div className="relative h-12 w-12">
@@ -259,7 +246,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
                     referrerPolicy="no-referrer"
                     loading="lazy"
                     decoding="async"
-                    className={`w-full max-h-[520px] object-contain rounded-lg shadow-[0_20px_45px_rgba(63,49,37,0.16)] transition-all duration-500 cursor-pointer ${loadedImages[currentScreenshot.id] ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.99]'} md:group-hover:brightness-[0.72]`}
+                    className={`block h-auto w-full max-w-full max-h-[55vh] sm:max-h-[520px] object-contain rounded-lg shadow-[0_20px_45px_rgba(63,49,37,0.16)] transition-all duration-500 cursor-pointer ${loadedImages[currentScreenshot.id] ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.99]'}`}
                     onClick={() => setZoomedScreenshot({ project: currentProject, screenshot: currentScreenshot })}
                     onLoad={() => setLoadedImages((prev) => ({ ...prev, [currentScreenshot.id]: true }))}
                     onError={() => {
@@ -271,16 +258,13 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
                     <ProjectScreenMockup screenshotId={currentScreenshot.id} />
                   </div>
                 )}
-                <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(-1)} aria-label="Photo précédente" className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg backdrop-blur-md hover:bg-white sm:left-5">
+                <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(-1)} aria-label="Photo précédente" className="absolute left-2 top-1/2 z-20 h-8 w-8 sm:h-10 sm:w-10 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg backdrop-blur-md hover:bg-white sm:left-5">
                   <ChevronLeft />
                 </Button>
-                <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(1)} aria-label="Photo suivante" className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg backdrop-blur-md hover:bg-white sm:right-5">
+                <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(1)} aria-label="Photo suivante" className="absolute right-2 top-1/2 z-20 h-8 w-8 sm:h-10 sm:w-10 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg backdrop-blur-md hover:bg-white sm:right-5">
                   <ChevronRight />
                 </Button>
-                <Button type="button" onClick={() => setZoomedScreenshot({ project: currentProject, screenshot: currentScreenshot })} className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-[#2D241E] px-4 text-[#FDFBF7] shadow-xl md:bottom-1/2 md:translate-y-1/2 md:opacity-0 md:group-hover:opacity-100" aria-label="Ouvrir l’image en plein écran">
-                  <Maximize2 />
-                  <span className="md:hidden lg:inline">Plein écran</span>
-                </Button>
+                
               </div>
 
               {/* View Caption / Explanation */}
@@ -297,11 +281,11 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
                   >
                     <span>{isDetailsOpen ? 'Masquer le détail ⌃' : 'Voir le détail ⌵'}</span>
                   </button>
-                  <span className="text-[#D5C7B7]">•</span>
+                  <span className="hidden md:inline text-[#D5C7B7] opacity-0 transition-opacity group-hover/card:opacity-100">•</span>
                   <button
                     type="button"
                     onClick={() => setZoomedScreenshot({ project: currentProject, screenshot: currentScreenshot })}
-                    className="inline-flex items-center gap-1 font-semibold text-[#2D241E] hover:underline cursor-pointer"
+                    className="hidden md:inline-flex opacity-0 transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100 items-center gap-1 font-semibold text-[#2D241E] hover:underline cursor-pointer"
                   >
                     <span>Plein écran ↗</span>
                   </button>
@@ -533,8 +517,8 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
                   <ProjectScreenMockup screenshotId={zoomedScreenshot.screenshot.id} isZoomed={true} />
                 </div>
               )}
-              <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(-1, true)} aria-label="Photo précédente" className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg hover:bg-white sm:left-5"><ChevronLeft /></Button>
-              <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(1, true)} aria-label="Photo suivante" className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg hover:bg-white sm:right-5"><ChevronRight /></Button>
+              <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(-1, true)} aria-label="Photo précédente" className="absolute left-2 top-1/2 z-20 h-8 w-8 sm:h-10 sm:w-10 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg hover:bg-white sm:left-5"><ChevronLeft /></Button>
+              <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(1, true)} aria-label="Photo suivante" className="absolute right-2 top-1/2 z-20 h-8 w-8 sm:h-10 sm:w-10 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg hover:bg-white sm:right-5"><ChevronRight /></Button>
             </div>
 
             {/* Email template specific display if view is email template */}

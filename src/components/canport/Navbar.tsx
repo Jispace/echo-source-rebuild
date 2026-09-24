@@ -70,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking, onOpenSchedule })
     <header className="fixed top-2 sm:top-5 left-0 right-0 z-50 px-2.5 sm:px-6 pointer-events-none transition-all duration-300">
       <div className="max-w-5xl mx-auto">
         <nav
-          className={`pointer-events-auto grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 transition-all duration-300 ${
+          className={`pointer-events-auto grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:flex md:justify-between transition-all duration-300 ${
             isScrolled
               ? 'bg-[#FAF7F2]/90 backdrop-blur-2xl border border-[#D5C7B7] shadow-[0_12px_36px_rgba(45,36,30,0.12)] rounded-2xl sm:rounded-full px-3 sm:px-5 py-2'
               : 'bg-[#FDFBF7]/80 backdrop-blur-xl border border-[#E7DFD3]/80 shadow-[0_8px_30px_rgba(45,36,30,0.06)] rounded-2xl sm:rounded-full px-3 sm:px-6 py-2 sm:py-3'
@@ -81,12 +81,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking, onOpenSchedule })
           <a
             href="#accueil"
             onClick={(e) => handleNavClick(e, '#accueil')}
-            className="flex min-w-0 items-center gap-2.5 sm:gap-3 group focus:outline-none"
+            className="flex min-w-0 items-center gap-2.5 sm:gap-3 group focus:outline-none md:order-3 md:flex-row-reverse"
           >
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#2D241E] text-[#FDFBF7] flex items-center justify-center font-bold text-xs sm:text-sm tracking-wider shadow-sm ring-1 ring-[#D8CDBC]/60 group-hover:scale-105 group-hover:bg-[#3D3129] transition-all">
               CR
             </div>
-            <div className="flex flex-col text-left min-w-0">
+            <div className="flex flex-col text-left min-w-0 md:text-right md:items-end">
               <span className="font-extrabold text-[#2D241E] text-xs sm:text-sm leading-tight tracking-tight group-hover:text-[#7A583E] transition-colors truncate">
                 {portfolioProfile.shortName}
               </span>
@@ -119,7 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking, onOpenSchedule })
           </a>
 
           {/* Liens de navigation au centre (Desktop) */}
-          <div className="hidden md:flex items-center gap-1 p-1 rounded-full bg-[#F4EDE2]/50 border border-[#E8DFC8]/60 backdrop-blur-xs">
+          <div className="hidden md:flex md:order-2 items-center gap-1 p-1 rounded-full bg-[#F4EDE2]/50 border border-[#E8DFC8]/60 backdrop-blur-xs">
             {navLinks.map((link) => {
               const isActive = activeSection === link.href.replace('#', '');
               return (
@@ -147,14 +147,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking, onOpenSchedule })
           </div>
 
           {/* Bouton d'action CTA à droite */}
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:order-1">
             <button
               type="button"
               onClick={() => onOpenBooking?.('Diagnostic Découverte (20 min offertes)')}
               className="hidden sm:inline-flex items-center gap-2 px-3.5 sm:px-4.5 py-2 sm:py-2.5 rounded-full text-xs font-bold text-[#FDFBF7] bg-[#2D241E] hover:bg-[#3E3228] active:scale-95 shadow-sm hover:shadow-md transition-all cursor-pointer group"
             >
               <Calendar className="w-3.5 h-3.5 text-[#E0A97E] group-hover:rotate-12 transition-transform duration-300" />
-              <span className="hidden sm:inline">Prendre RDV</span>
+              <span className="hidden sm:inline">Prendre un RDV</span>
               <span className="inline sm:hidden">RDV</span>
               <span className="hidden md:inline text-[10px] font-normal text-[#E0A97E] bg-white/10 px-1.5 py-0.5 rounded-full">
                 Offert

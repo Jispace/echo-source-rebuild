@@ -81,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking, onOpenSchedule })
           <a
             href="#accueil"
             onClick={(e) => handleNavClick(e, '#accueil')}
-            className="flex min-w-0 items-center gap-2.5 sm:gap-3 group focus:outline-none md:order-3 md:flex-row-reverse"
+            className="flex min-w-0 items-center gap-2.5 sm:gap-3 group focus:outline-none md:order-1"
           >
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#2D241E] text-[#FDFBF7] flex items-center justify-center font-bold text-xs sm:text-sm tracking-wider shadow-sm ring-1 ring-[#D8CDBC]/60 group-hover:scale-105 group-hover:bg-[#3D3129] transition-all">
               CR
@@ -147,7 +147,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking, onOpenSchedule })
           </div>
 
           {/* Bouton d'action CTA à droite */}
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:order-1">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:order-3">
             <button
               type="button"
               onClick={() => onOpenBooking?.('Diagnostic Découverte (20 min offertes)')}

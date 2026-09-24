@@ -213,6 +213,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
               <X className="w-5 h-5" />
             </button>
 
+            {sentMessage && (
+              <div role="status" className="clear-both mb-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{sentMessage}</span>
+              </div>
+            )}
+
             {step === 'slot' && (
               <div className="clear-both sm:clear-none">
                 <div className="flex items-start gap-2 pr-1 text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#7A583E] mb-2">
@@ -341,28 +348,32 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                 </div>
 
                 {/* CTA Next */}
-                <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#EAE2D7]">
-                  <button
-                    id="booking-send-slot-btn"
-                    type="button"
-                    disabled={!selectedSlot || isRedirecting}
-                    onClick={() => sendToCalendly({ note: `Formule : ${selectedPlan}` })}
-                    className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#A87C51] hover:bg-[#8F6544] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-60"
-                  >
-                    <span>{isRedirecting ? 'Envoi…' : 'Envoyer'}</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </button>
+                <div className="mt-5 grid grid-cols-1 sm:flex sm:flex-wrap items-center justify-between gap-2 pt-4 border-t border-[#EAE2D7]">
+                  <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
+                    <button
+                      id="booking-send-slot-btn"
+                      type="button"
+                      disabled={!selectedSlot || isRedirecting}
+                      onClick={() => sendToCalendly({ note: `Formule : ${selectedPlan}` })}
+                      className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#A87C51] hover:bg-[#8F6544] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-60"
+                    >
+                      <span>{isRedirecting ? 'Envoi…' : 'Envoyer'}</span>
+                      <CheckCircle2 className="w-4 h-4" />
+                    </button>
+                    {calendlyLinkBtn}
+                  </div>
                   <button
                     id="booking-next-step-btn"
                     type="button"
                     disabled={!selectedSlot}
                     onClick={() => setStep('info')}
-                    className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#2D241E] hover:bg-[#3E3228] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-3 rounded-full bg-[#2D241E] hover:bg-[#3E3228] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                   >
-                    <span>Continuer avec ce créneau</span>
+                    <span>Ajouter mes coordonnées</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
+                <div className="mt-3 flex justify-center">{backToPortfolioBtn}</div>
               </div>
             )}
 
@@ -456,6 +467,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                     ← Retour
                   </button>
                 <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center">
+                    {calendlyLinkBtn}
                     <button
                       id="booking-submit-btn"
                       type="submit"
@@ -468,6 +480,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                     </button>
                   </div>
                 </div>
+                <div className="mt-3 flex justify-center">{backToPortfolioBtn}</div>
               </form>
             )}
 

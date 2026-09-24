@@ -111,6 +111,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
     if (!currentDayConfig.slots.includes(selectedSlot)) setSelectedSlot(currentDayConfig.slots[0] ?? '');
   }, [currentDayConfig, selectedDayKey, selectedSlot]);
 
+  const [sentMessage, setSentMessage] = useState('');
+
+  const resetForm = () => {
+    setStep('slot');
+    setName('');
+    setEmail('');
+    setNote('');
+    setSelectedDayKey('');
+    setSelectedSlot('');
+    setSelectedPlan(initialPlan || 'Organisation Administrative');
+    setIsRedirecting(false);
+  };
+
   const sendToCalendly = (info: { name?: string; email?: string; note?: string }) => {
     if (!currentDayConfig || !selectedSlot) return;
     if (slotStartMs(currentDayConfig.key, selectedSlot) <= Date.now()) {
@@ -118,7 +131,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
       return;
     }
     setIsRedirecting(true);
-    window.location.assign(buildCalendlySlotUrl(currentDayConfig.key, selectedSlot, info));
+    const label = `${currentDayConfig.date} à ${selectedSlot.slice(0, 5)}`;
+    const win = window.open(buildCalendlySlotUrl(currentDayConfig.key, selectedSlot, info), '_blank', 'noopener');
+    if (!win) {
+      window.location.assign(buildCalendlySlotUrl(currentDayConfig.key, selectedSlot, info));
+      return;
+    }
+    resetForm();
+    setSentMessage(`Créneau du ${label} envoyé sur Calendly. Confirmez-le dans l'onglet ouvert.`);
+    window.setTimeout(() => setSentMessage(''), 6000);
   };
 
   const handleConfirmBooking = (e: React.FormEvent) => {
@@ -129,10 +150,32 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
   };
 
   const handleReset = () => {
-    setStep('slot');
-    setIsRedirecting(false);
+    resetForm();
+    setSentMessage('');
     onClose();
   };
+
+  const calendlyLinkBtn = (
+    <a
+      href={CALENDLY_EVENT_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="w-full sm:w-auto px-5 py-3 rounded-full bg-white border border-[#DCD1C4] hover:bg-[#F2ECE2] text-[#473B30] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
+    >
+      <span>Aller sur Calendly</span>
+      <ExternalLink className="w-3.5 h-3.5 text-[#8F6544]" />
+    </a>
+  );
+
+  const backToPortfolioBtn = (
+    <button
+      type="button"
+      onClick={handleReset}
+      className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-[#635345] hover:text-[#2D241E] underline-offset-2 hover:underline cursor-pointer"
+    >
+      ← Retour au portfolio
+    </button>
+  );
 
   const selectedDateLabel = currentDayConfig?.date ?? '';
 

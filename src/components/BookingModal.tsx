@@ -24,7 +24,7 @@ interface DayOption { key: string; label: string; date: string; hours: string; s
 
 /** Absolute timestamp (ms) for a slot start on an EAT calendar day. */
 function slotStartMs(dayKey: string, slot: string) {
-  const [h, m] = slot.slice(0, 5).split(':').map(Number);
+  const [h = 0, m = 0] = slot.slice(0, 5).split(":").map(Number);
   return Date.parse(`${dayKey}T${pad(h)}:${pad(m)}:00+03:00`);
 }
 

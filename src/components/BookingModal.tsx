@@ -10,15 +10,27 @@ interface BookingModalProps {
   initialPlan?: string;
 }
 
-// Candya's weekly slots (East Africa Time, UTC+3). Key = UTC weekday (2=Tue, 3=Wed, 4=Thu).
+const pad = (n: number) => String(n).padStart(2, '0');
+const SLOT_MINUTES = 20;
+
+/** Consecutive 20-minute slots between start and end hour (EAT). */
+function makeSlots(startH: number, endH: number) {
+  const out: string[] = [];
+  for (let m = startH * 60; m + SLOT_MINUTES <= endH * 60; m += SLOT_MINUTES) {
+    const e = m + SLOT_MINUTES;
+    out.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)} - ${pad(Math.floor(e / 60))}:${pad(e % 60)}`);
+  }
+  return out;
+}
+
+// Candya's weekly availability (East Africa Time, UTC+3). Key = weekday (2=Tue, 3=Wed, 4=Thu).
 const WEEKLY_SLOTS: Record<number, { label: string; hours: string; slots: string[] }> = {
-  2: { label: 'Mardi', hours: '08:00 - 12:00', slots: ['08:30 - 08:50', '09:30 - 09:50', '10:30 - 10:50', '11:15 - 11:35'] },
-  3: { label: 'Mercredi', hours: '09:00 - 15:00', slots: ['09:30 - 09:50', '11:00 - 11:20', '13:00 - 13:20', '14:15 - 14:35'] },
-  4: { label: 'Jeudi', hours: '09:00 - 12:00', slots: ['09:15 - 09:35', '10:15 - 10:35', '11:00 - 11:20', '11:35 - 11:55'] },
+  2: { label: 'Mardi', hours: '08:00 - 12:00', slots: makeSlots(8, 12) },
+  3: { label: 'Mercredi', hours: '09:00 - 15:00', slots: makeSlots(9, 15) },
+  4: { label: 'Jeudi', hours: '09:00 - 12:00', slots: makeSlots(9, 12) },
 };
 const EAT_OFFSET_MS = 3 * 3600 * 1000;
 const MONTHS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-const pad = (n: number) => String(n).padStart(2, '0');
 
 interface DayOption { key: string; label: string; date: string; hours: string; slots: string[] }
 
@@ -99,6 +111,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
     if (!currentDayConfig.slots.includes(selectedSlot)) setSelectedSlot(currentDayConfig.slots[0] ?? '');
   }, [currentDayConfig, selectedDayKey, selectedSlot]);
 
+  const [sentMessage, setSentMessage] = useState('');
+
+  const resetForm = () => {
+    setStep('slot');
+    setName('');
+    setEmail('');
+    setNote('');
+    setSelectedDayKey('');
+    setSelectedSlot('');
+    setSelectedPlan(initialPlan || 'Organisation Administrative');
+    setIsRedirecting(false);
+  };
+
   const sendToCalendly = (info: { name?: string; email?: string; note?: string }) => {
     if (!currentDayConfig || !selectedSlot) return;
     if (slotStartMs(currentDayConfig.key, selectedSlot) <= Date.now()) {
@@ -106,7 +131,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
       return;
     }
     setIsRedirecting(true);
-    window.location.assign(buildCalendlySlotUrl(currentDayConfig.key, selectedSlot, info));
+    const label = `${currentDayConfig.date} à ${selectedSlot.slice(0, 5)}`;
+    const win = window.open(buildCalendlySlotUrl(currentDayConfig.key, selectedSlot, info), '_blank', 'noopener');
+    if (!win) {
+      window.location.assign(buildCalendlySlotUrl(currentDayConfig.key, selectedSlot, info));
+      return;
+    }
+    resetForm();
+    setSentMessage(`Créneau du ${label} envoyé sur Calendly. Confirmez-le dans l'onglet ouvert.`);
+    window.setTimeout(() => setSentMessage(''), 6000);
   };
 
   const handleConfirmBooking = (e: React.FormEvent) => {
@@ -117,10 +150,32 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
   };
 
   const handleReset = () => {
-    setStep('slot');
-    setIsRedirecting(false);
+    resetForm();
+    setSentMessage('');
     onClose();
   };
+
+  const calendlyLinkBtn = (
+    <a
+      href={CALENDLY_EVENT_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="w-full sm:w-auto px-5 py-3 rounded-full bg-white border border-[#DCD1C4] hover:bg-[#F2ECE2] text-[#473B30] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
+    >
+      <span>Aller sur Calendly</span>
+      <ExternalLink className="w-3.5 h-3.5 text-[#8F6544]" />
+    </a>
+  );
+
+  const backToPortfolioBtn = (
+    <button
+      type="button"
+      onClick={handleReset}
+      className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-[#635345] hover:text-[#2D241E] underline-offset-2 hover:underline cursor-pointer"
+    >
+      ← Retour au portfolio
+    </button>
+  );
 
   const selectedDateLabel = currentDayConfig?.date ?? '';
 
@@ -157,6 +212,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
             >
               <X className="w-5 h-5" />
             </button>
+
+            {sentMessage && (
+              <div role="status" className="clear-both mb-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{sentMessage}</span>
+              </div>
+            )}
 
             {step === 'slot' && (
               <div className="clear-both sm:clear-none">
@@ -286,28 +348,32 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                 </div>
 
                 {/* CTA Next */}
-                <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#EAE2D7]">
-                  <button
-                    id="booking-send-slot-btn"
-                    type="button"
-                    disabled={!selectedSlot || isRedirecting}
-                    onClick={() => sendToCalendly({ note: `Formule : ${selectedPlan}` })}
-                    className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#A87C51] hover:bg-[#8F6544] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-60"
-                  >
-                    <span>{isRedirecting ? 'Envoi…' : 'Envoyer'}</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </button>
+                <div className="mt-5 grid grid-cols-1 sm:flex sm:flex-wrap items-center justify-between gap-2 pt-4 border-t border-[#EAE2D7]">
+                  <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
+                    <button
+                      id="booking-send-slot-btn"
+                      type="button"
+                      disabled={!selectedSlot || isRedirecting}
+                      onClick={() => sendToCalendly({ note: `Formule : ${selectedPlan}` })}
+                      className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#A87C51] hover:bg-[#8F6544] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-60"
+                    >
+                      <span>{isRedirecting ? 'Envoi…' : 'Envoyer'}</span>
+                      <CheckCircle2 className="w-4 h-4" />
+                    </button>
+                    {calendlyLinkBtn}
+                  </div>
                   <button
                     id="booking-next-step-btn"
                     type="button"
                     disabled={!selectedSlot}
                     onClick={() => setStep('info')}
-                    className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#2D241E] hover:bg-[#3E3228] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-3 rounded-full bg-[#2D241E] hover:bg-[#3E3228] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                   >
-                    <span>Continuer avec ce créneau</span>
+                    <span>Ajouter mes coordonnées</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
+                <div className="mt-3 flex justify-center">{backToPortfolioBtn}</div>
               </div>
             )}
 
@@ -401,6 +467,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                     ← Retour
                   </button>
                 <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center">
+                    {calendlyLinkBtn}
                     <button
                       id="booking-submit-btn"
                       type="submit"
@@ -413,6 +480,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                     </button>
                   </div>
                 </div>
+                <div className="mt-3 flex justify-center">{backToPortfolioBtn}</div>
               </form>
             )}
 

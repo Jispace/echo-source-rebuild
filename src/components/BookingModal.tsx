@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, CheckCircle2, Clock, ShieldCheck, ArrowRight, User, Mail, MessageSquare, ExternalLink, Sparkles } from 'lucide-react';
-import { portfolioProfile, servicePlans, getCalendlyUrl } from '../data/portfolioData';
+import { servicePlans } from '../data/portfolioData';
 import { useScrollLock } from '../hooks/use-scroll-lock';
 
 interface BookingModalProps {
@@ -10,37 +10,65 @@ interface BookingModalProps {
   initialPlan?: string;
 }
 
-const DEFAULT_SCHEDULE_OPTION = {
-    dayKey: 'mardi',
-    label: 'Mardi',
-    date: 'Mardi 22 Sept.',
-    hours: '08:00 - 12:00',
-    slots: ['08:30 - 08:50', '09:30 - 09:50', '10:30 - 10:50', '11:15 - 11:35'],
+// Candya's weekly slots (East Africa Time, UTC+3). Key = UTC weekday (2=Tue, 3=Wed, 4=Thu).
+const WEEKLY_SLOTS: Record<number, { label: string; hours: string; slots: string[] }> = {
+  2: { label: 'Mardi', hours: '08:00 - 12:00', slots: ['08:30 - 08:50', '09:30 - 09:50', '10:30 - 10:50', '11:15 - 11:35'] },
+  3: { label: 'Mercredi', hours: '09:00 - 15:00', slots: ['09:30 - 09:50', '11:00 - 11:20', '13:00 - 13:20', '14:15 - 14:35'] },
+  4: { label: 'Jeudi', hours: '09:00 - 12:00', slots: ['09:15 - 09:35', '10:15 - 10:35', '11:00 - 11:20', '11:35 - 11:55'] },
 };
+const EAT_OFFSET_MS = 3 * 3600 * 1000;
+const MONTHS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+const pad = (n: number) => String(n).padStart(2, '0');
 
-const SCHEDULE_OPTIONS = [
-  DEFAULT_SCHEDULE_OPTION,
-  {
-    dayKey: 'mercredi',
-    label: 'Mercredi',
-    date: 'Mercredi 23 Sept.',
-    hours: '09:00 - 15:00',
-    slots: ['09:30 - 09:50', '11:00 - 11:20', '13:00 - 13:20', '14:15 - 14:35'],
-  },
-  {
-    dayKey: 'jeudi',
-    label: 'Jeudi',
-    date: 'Jeudi 24 Sept.',
-    hours: '09:00 - 12:00',
-    slots: ['09:15 - 09:35', '10:15 - 10:35', '11:00 - 11:20', '11:35 - 11:55'],
-  },
-];
+interface DayOption { key: string; label: string; date: string; hours: string; slots: string[] }
+
+/** Absolute timestamp (ms) for a slot start on an EAT calendar day. */
+function slotStartMs(dayKey: string, slot: string) {
+  const [h, m] = slot.slice(0, 5).split(':').map(Number);
+  return Date.parse(`${dayKey}T${pad(h)}:${pad(m)}:00+03:00`);
+}
+
+/** Next working days (Tue/Wed/Thu) that still have at least one future slot. */
+function buildUpcomingDays(nowMs: number, count = 6): DayOption[] {
+  const days: DayOption[] = [];
+  const eatNow = new Date(nowMs + EAT_OFFSET_MS);
+  for (let i = 0; i < 28 && days.length < count; i++) {
+    const d = new Date(Date.UTC(eatNow.getUTCFullYear(), eatNow.getUTCMonth(), eatNow.getUTCDate() + i));
+    const cfg = WEEKLY_SLOTS[d.getUTCDay()];
+    if (!cfg) continue;
+    const key = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+    const slots = cfg.slots.filter((s) => slotStartMs(key, s) > nowMs);
+    if (!slots.length) continue;
+    days.push({
+      key,
+      label: i === 0 ? "Aujourd'hui" : cfg.label,
+      date: `${cfg.label} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`,
+      hours: cfg.hours,
+      slots,
+    });
+  }
+  return days;
+}
+
+const CALENDLY_EVENT_URL = 'https://calendly.com/rancandya/appel-decouverte-candya';
+
+/** Calendly link that opens directly on the chosen time slot, prefilled. */
+function buildCalendlySlotUrl(dayKey: string, slot: string, info: { name?: string; email?: string; note?: string }) {
+  const start = `${dayKey}T${slot.slice(0, 5)}:00+03:00`;
+  const params = new URLSearchParams({ month: dayKey.slice(0, 7), date: dayKey });
+  if (info.name) params.set('name', info.name);
+  if (info.email) params.set('email', info.email);
+  if (info.note) params.set('a1', info.note);
+  params.set('utm_source', 'portfolio');
+  return `${CALENDLY_EVENT_URL}/${start}?${params.toString()}`;
+}
 
 export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, initialPlan }) => {
   useScrollLock(isOpen);
   const [selectedPlan, setSelectedPlan] = useState<string>(initialPlan || 'Organisation Administrative');
-  const [selectedDay, setSelectedDay] = useState(0);
-  const [selectedSlot, setSelectedSlot] = useState(DEFAULT_SCHEDULE_OPTION.slots[1] ?? DEFAULT_SCHEDULE_OPTION.slots[0] ?? '');
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [selectedDayKey, setSelectedDayKey] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState('');
   const [step, setStep] = useState<'slot' | 'info' | 'success'>('slot');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -53,25 +81,39 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
     }
   }, [initialPlan]);
 
-  const currentDayConfig = SCHEDULE_OPTIONS[selectedDay] ?? DEFAULT_SCHEDULE_OPTION;
+  // Refresh "now" every 30s while open so past slots disappear in real time.
+  useEffect(() => {
+    if (!isOpen) return;
+    setNowMs(Date.now());
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, [isOpen]);
+
+  const upcomingDays = React.useMemo(() => buildUpcomingDays(nowMs), [nowMs]);
+  const currentDayConfig: DayOption | undefined =
+    upcomingDays.find((d) => d.key === selectedDayKey) ?? upcomingDays[0];
 
   useEffect(() => {
-    if (currentDayConfig && !currentDayConfig.slots.includes(selectedSlot)) {
-      setSelectedSlot(currentDayConfig.slots[0] ?? '');
+    if (!currentDayConfig) return;
+    if (currentDayConfig.key !== selectedDayKey) setSelectedDayKey(currentDayConfig.key);
+    if (!currentDayConfig.slots.includes(selectedSlot)) setSelectedSlot(currentDayConfig.slots[0] ?? '');
+  }, [currentDayConfig, selectedDayKey, selectedSlot]);
+
+  const sendToCalendly = (info: { name?: string; email?: string; note?: string }) => {
+    if (!currentDayConfig || !selectedSlot) return;
+    if (slotStartMs(currentDayConfig.key, selectedSlot) <= Date.now()) {
+      setNowMs(Date.now());
+      return;
     }
-  }, [selectedDay, currentDayConfig]);
+    setIsRedirecting(true);
+    window.location.assign(buildCalendlySlotUrl(currentDayConfig.key, selectedSlot, info));
+  };
 
   const handleConfirmBooking = (e: React.FormEvent) => {
     e.preventDefault();
     if (isRedirecting) return;
-    setIsRedirecting(true);
-    const details = [
-      `Formule : ${selectedPlan}`,
-      `Préférence : ${currentDayConfig.label}, ${selectedSlot}`,
-      note.trim(),
-    ].filter(Boolean).join(' — ');
-    const url = getCalendlyUrl(selectedPlan, { name: name.trim(), email: email.trim(), note: details });
-    window.location.assign(url);
+    const details = [`Formule : ${selectedPlan}`, note.trim()].filter(Boolean).join(' — ');
+    sendToCalendly({ name: name.trim(), email: email.trim(), note: details });
   };
 
   const handleReset = () => {
@@ -80,7 +122,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
     onClose();
   };
 
-  const calendlyDirectUrl = getCalendlyUrl(selectedPlan, { name, email, note });
+  const selectedDateLabel = currentDayConfig?.date ?? '';
 
   return (
     <AnimatePresence>
@@ -173,28 +215,28 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                 <div className="mt-4">
                   <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:justify-between mb-2">
                     <label className="text-xs font-bold text-[#473B30] uppercase tracking-wider block">
-                      2. Choisissez le jour (Mar, Mer, Jeu)
+                      2. Choisissez le jour
                     </label>
                     <span className="w-fit text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       East Africa Time
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    {SCHEDULE_OPTIONS.map((day, idx) => (
+                    {upcomingDays.map((day) => (
                       <button
-                        key={day.dayKey}
+                        key={day.key}
                         type="button"
-                        onClick={() => setSelectedDay(idx)}
+                        onClick={() => setSelectedDayKey(day.key)}
                         className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
-                          selectedDay === idx
+                          currentDayConfig?.key === day.key
                             ? 'bg-[#2D241E] text-white border-[#2D241E] shadow-xs'
                             : 'bg-white text-[#4A3F35] border-[#E8DFD3] hover:border-[#C4B3A1]'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="block text-xs font-bold">{day.label}</span>
-                          <span className={`text-[10px] font-medium ${selectedDay === idx ? 'text-[#D5C2B1]' : 'text-[#8A7969]'}`}>
-                            {day.hours}
+                          <span className={`text-[10px] font-medium ${currentDayConfig?.key === day.key ? 'text-[#D5C2B1]' : 'text-[#8A7969]'}`}>
+                            {day.slots.length} créneau{day.slots.length > 1 ? 'x' : ''}
                           </span>
                         </div>
                         <span className="block text-[11px] opacity-80 mt-1">{day.date}</span>
@@ -207,11 +249,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                 <div className="mt-4">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-bold text-[#473B30] uppercase tracking-wider block">
-                      3. Créneaux disponibles ({currentDayConfig.label} : {currentDayConfig.hours})
+                      3. Créneaux disponibles {currentDayConfig ? `(${currentDayConfig.date})` : ''}
                     </label>
                   </div>
+                  {upcomingDays.length === 0 && (
+                    <p className="text-xs text-[#635345]">Aucun créneau disponible pour le moment.</p>
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {currentDayConfig.slots.map((slot) => (
+                    {(currentDayConfig?.slots ?? []).map((slot) => (
                       <button
                         key={slot}
                         type="button"
@@ -242,18 +287,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
 
                 {/* CTA Next */}
                 <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#EAE2D7]">
-                  <a
-                    href={getCalendlyUrl(selectedPlan)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="max-w-full text-center text-xs text-[#7A583E] hover:underline font-semibold inline-flex items-center justify-center gap-1.5 break-words"
+                  <button
+                    id="booking-send-slot-btn"
+                    type="button"
+                    disabled={!selectedSlot || isRedirecting}
+                    onClick={() => sendToCalendly({ note: `Formule : ${selectedPlan}` })}
+                    className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#A87C51] hover:bg-[#8F6544] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-60"
                   >
-                    <span>Ouvrir sur Calendly ({selectedPlan})</span>
+                    <span>{isRedirecting ? 'Envoi…' : 'Envoyer'}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                  </button>
                   <button
                     id="booking-next-step-btn"
                     type="button"
+                    disabled={!selectedSlot}
                     onClick={() => setStep('info')}
                     className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#2D241E] hover:bg-[#3E3228] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                   >
@@ -277,7 +324,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-[#2D241E]">🎯 {selectedPlan}</span>
                     <span className="text-[#C2B29F]">•</span>
-                    <span>📅 {SCHEDULE_OPTIONS[selectedDay]?.date ?? DEFAULT_SCHEDULE_OPTION.date}</span>
+                    <span>📅 {selectedDateLabel}</span>
                     <span className="text-[#C2B29F]">•</span>
                     <span>⏰ {selectedSlot}</span>
                   </div>
@@ -354,15 +401,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                     ← Retour
                   </button>
                 <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center">
-                    <a
-                      href={calendlyDirectUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 sm:flex-none px-4 py-3 rounded-full bg-[#FAF7F2] border border-[#DCD1C4] hover:bg-[#F2ECE2] text-[#473B30] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <span>Calendly direct</span>
-                      <ExternalLink className="w-3.5 h-3.5 text-[#7A583E]" />
-                    </a>
                     <button
                       id="booking-submit-btn"
                       type="submit"
@@ -370,7 +408,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                        aria-busy={isRedirecting}
                        className="flex-1 sm:flex-none px-6 py-3 rounded-full bg-[#2D241E] hover:bg-[#3E3228] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:cursor-wait disabled:opacity-70"
                     >
-                       <span>{isRedirecting ? 'Ouverture de Calendly…' : 'Continuer sur Calendly'}</span>
+                       <span>{isRedirecting ? 'Envoi…' : 'Envoyer'}</span>
                       <CheckCircle2 className="w-4 h-4 text-[#E0A97E]" />
                     </button>
                   </div>
@@ -388,7 +426,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                 </h3>
                 <p className="text-xs sm:text-sm text-[#635345] max-w-md mx-auto leading-relaxed">
                   Merci {name || 'cher client'} ! Votre appel de découverte est programmé pour le{' '}
-                  <strong className="text-[#2D241E]">{SCHEDULE_OPTIONS[selectedDay]?.date ?? DEFAULT_SCHEDULE_OPTION.date}</strong> à{' '}
+                  <strong className="text-[#2D241E]">{selectedDateLabel}</strong> à{' '}
                   <strong className="text-[#2D241E]">{selectedSlot}</strong>.
                 </p>
                 <div className="p-4 rounded-2xl bg-white border border-[#E7DFD5] text-xs text-[#5C4D3E] max-w-sm mx-auto text-left space-y-1.5 shadow-2xs">
@@ -396,22 +434,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ini
                   <div><strong>Email :</strong> {email || 'Envoyé par email'}</div>
                   <div><strong>Format :</strong> Visioconférence Google Meet (20 min offertes)</div>
                   <div><strong>Objectif :</strong> Clarifier vos points de blocage et vos priorités</div>
-                </div>
-
-                {/* Direct Calendly confirmation bridge */}
-                <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E8DFC8] text-xs text-[#635345] max-w-sm mx-auto">
-                  <p className="mb-2.5 text-[11px] leading-relaxed">
-                    Préférez-vous bloquer automatiquement le créneau sur votre compte Calendly avec ce plan ?
-                  </p>
-                  <a
-                    href={calendlyDirectUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-[#2D241E] text-white text-xs font-semibold hover:bg-[#3E3228] transition-colors"
-                  >
-                    <span>Ouvrir sur Calendly avec {selectedPlan}</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-[#E0A97E]" />
-                  </a>
                 </div>
 
                 <div className="pt-2">

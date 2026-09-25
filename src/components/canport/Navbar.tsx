@@ -86,7 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking, onOpenSchedule })
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#2D241E] text-[#FDFBF7] flex items-center justify-center font-bold text-xs sm:text-sm tracking-wider shadow-sm ring-1 ring-[#D8CDBC]/60 group-hover:scale-105 group-hover:bg-[#3D3129] transition-all">
               CR
             </div>
-            <div className="flex flex-col text-left min-w-0 md:text-right md:items-end">
+            <div className="flex flex-col items-start text-left min-w-0">
               <span className="font-extrabold text-[#2D241E] text-xs sm:text-sm leading-tight tracking-tight group-hover:text-[#7A583E] transition-colors truncate">
                 {portfolioProfile.shortName}
               </span>

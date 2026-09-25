@@ -20,10 +20,40 @@ export const Route = createFileRoute("/api/public/calendly-webhook")({
       GET: async () => json({ error: "Method not allowed" }, 405),
       POST: async ({ request }) => {
         console.log("[calendly-webhook] request received");
-        // Future: verify signature using process.env.CALENDLY_WEBHOOK_SECRET
+        const rawBody = await request.text();
+        const secret = process.env["CALENDLY_WEBHOOK_SECRET"];
+        if (!secret) {
+          console.error("[calendly-webhook] CALENDLY_WEBHOOK_SECRET missing");
+          return json({ error: "Server misconfigured" }, 500);
+        }
+        const header = request.headers.get("calendly-webhook-signature") ?? "";
+        const parts = Object.fromEntries(
+          header.split(",").map((kv) => {
+            const i = kv.indexOf("=");
+            return [kv.slice(0, i).trim(), kv.slice(i + 1).trim()];
+          }),
+        );
+        const t = parts["t"];
+        const v1 = parts["v1"];
+        console.log("[calendly-webhook] timestamp received:", t ?? "none");
+        const invalid = (reason: string) => {
+          console.warn("[calendly-webhook] Signature invalid:", reason);
+          return new Response("Invalid signature", { status: 401, headers: CORS });
+        };
+        if (!t || !v1) return invalid("missing t or v1");
+        const ts = Number(t);
+        if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > 300)
+          return invalid("timestamp outside 5 min tolerance");
+        const { createHmac, timingSafeEqual } = await import("crypto");
+        const expected = createHmac("sha256", secret).update(`${t}.${rawBody}`).digest("hex");
+        const a = Buffer.from(expected, "utf8");
+        const b = Buffer.from(v1, "utf8");
+        if (a.length !== b.length || !timingSafeEqual(a, b)) return invalid("mismatch");
+        console.log("[calendly-webhook] Signature valid");
+
         let body: any;
         try {
-          body = await request.json();
+          body = JSON.parse(rawBody);
         } catch {
           console.error("[calendly-webhook] invalid JSON");
           return json({ error: "Invalid JSON body" }, 400);

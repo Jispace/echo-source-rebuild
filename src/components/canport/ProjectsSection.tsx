@@ -38,6 +38,21 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
     screenshot: Screenshot;
   } | null>(null);
   useScrollLock(Boolean(zoomedScreenshot));
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const isZoomOpen = Boolean(zoomedScreenshot);
+  useEffect(() => {
+    if (!isZoomOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoomedScreenshot(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      previouslyFocused?.focus?.();
+    };
+  }, [isZoomOpen]);
 
   useEffect(() => {
     const selector = selectorRef.current;
@@ -200,7 +215,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
 
           {/* Interactive Screen Viewer (Window style) */}
           <div className="p-2.5 sm:p-6 lg:p-8 bg-[#F9F7F3]/50">
-            <div className="group/card overflow-hidden rounded-2xl border border-[#DED4C8] bg-white shadow-[0_18px_50px_rgba(68,52,38,0.09)]">
+            <div className="group/card overflow-hidden rounded-2xl border border-[#DED4C8] bg-white shadow-[0_18px_50px_rgba(68,52,38,0.09)] motion-safe:transition-[transform,box-shadow] motion-safe:duration-300 ease-out md:hover:-translate-y-1 md:hover:shadow-[0_28px_70px_rgba(68,52,38,0.14)]">
               {/* Window Title Bar */}
               <div className="flex items-center justify-center border-b border-[#EAE3D8] bg-[#F4EFE8] px-3 py-3 sm:justify-end sm:px-4">
                 {/* Switcher for Views */}
@@ -222,13 +237,11 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
                       </button>
                     );
                   })}
-
-                  
                 </div>
               </div>
 
               {/* Window Body: Images de l'aperçu */}
-              <div className="group relative flex min-h-[200px] items-center justify-center overflow-hidden bg-[#EDE7DE] p-2 sm:min-h-[460px] sm:p-5">
+              <div className="group/media relative flex min-h-[200px] items-center justify-center overflow-hidden bg-[#EDE7DE] p-2 sm:min-h-[460px] sm:p-5">
                 {!loadedImages[currentScreenshot.id] && !imgErrors[currentScreenshot.id] && (
                   <div className="absolute inset-0 z-10 grid place-items-center bg-[#F2EDE6]" role="status" aria-label="Chargement de l’image">
                     <div className="relative h-12 w-12">
@@ -246,7 +259,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
                     referrerPolicy="no-referrer"
                     loading="lazy"
                     decoding="async"
-                    className={`block h-auto w-full max-w-full max-h-[55vh] sm:max-h-[520px] object-contain rounded-lg shadow-[0_20px_45px_rgba(63,49,37,0.16)] transition-all duration-500 cursor-pointer ${loadedImages[currentScreenshot.id] ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.99]'}`}
+                    className={`block h-auto w-full max-w-full max-h-[55vh] sm:max-h-[520px] object-contain rounded-lg shadow-[0_20px_45px_rgba(63,49,37,0.16)] motion-safe:transition-[opacity,transform] motion-safe:duration-300 ease-out cursor-zoom-in md:group-hover/media:scale-[1.03] ${loadedImages[currentScreenshot.id] ? 'opacity-100' : 'opacity-0'}`}
                     onClick={() => setZoomedScreenshot({ project: currentProject, screenshot: currentScreenshot })}
                     onLoad={() => setLoadedImages((prev) => ({ ...prev, [currentScreenshot.id]: true }))}
                     onError={() => {
@@ -258,12 +271,33 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
                     <ProjectScreenMockup screenshotId={currentScreenshot.id} />
                   </div>
                 )}
+                {/* Overlay léger (desktop, au survol) */}
+                <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[15] bg-gradient-to-t from-[#2D241E]/35 via-[#2D241E]/5 to-transparent opacity-0 motion-safe:transition-opacity motion-safe:duration-300 md:group-hover/media:opacity-100 md:group-focus-within/media:opacity-100" />
                 <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(-1)} aria-label="Photo précédente" className="absolute left-2 top-1/2 z-20 h-8 w-8 sm:h-10 sm:w-10 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg backdrop-blur-md hover:bg-white sm:left-5">
                   <ChevronLeft />
                 </Button>
                 <Button type="button" variant="outline" size="icon" onClick={() => selectAdjacentView(1)} aria-label="Photo suivante" className="absolute right-2 top-1/2 z-20 h-8 w-8 sm:h-10 sm:w-10 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-[#3E3228] shadow-lg backdrop-blur-md hover:bg-white sm:right-5">
                   <ChevronRight />
                 </Button>
+                {/* Bouton plein écran : toujours visible au toucher, révélé au survol sur desktop */}
+                <button
+                  type="button"
+                  onClick={() => setZoomedScreenshot({ project: currentProject, screenshot: currentScreenshot })}
+                  aria-label="Afficher en plein écran"
+                  title="Afficher en plein écran"
+                  className="absolute right-2 top-2 z-20 grid h-11 w-11 place-items-center rounded-full border border-white/70 bg-white/80 text-[#2D241E] shadow-[0_8px_24px_rgba(45,36,30,0.18)] backdrop-blur-md cursor-pointer hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A583E] focus-visible:ring-offset-2 motion-safe:transition-all motion-safe:duration-300 sm:right-4 sm:top-4 md:opacity-0 md:scale-95 md:group-hover/media:opacity-100 md:group-hover/media:scale-100 md:focus-visible:opacity-100 md:focus-visible:scale-100"
+                >
+                  <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                </button>
+                {/* CTA « Voir le projet » */}
+                <button
+                  type="button"
+                  onClick={() => setIsDetailsOpen(true)}
+                  className="absolute bottom-3 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/70 bg-white/85 px-4 py-2.5 text-xs font-semibold text-[#2D241E] shadow-[0_8px_24px_rgba(45,36,30,0.18)] backdrop-blur-md cursor-pointer hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A583E] focus-visible:ring-offset-2 md:inline-flex md:opacity-0 md:translate-y-2 md:group-hover/media:opacity-100 md:group-hover/media:translate-y-0 md:focus-visible:opacity-100 md:focus-visible:translate-y-0 motion-safe:transition-all motion-safe:duration-300 sm:bottom-5"
+                >
+                  Voir le projet <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+
                 
               </div>
 
@@ -446,13 +480,18 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenBooking 
 
       {/* Fullscreen Lightbox / Zoom Modal */}
       {zoomedScreenshot && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-black/60 backdrop-blur-sm animate-fade-in sm:items-center sm:p-6">
-          <div role="dialog" aria-modal="true" aria-label="Aperçu du projet" className="relative max-h-[100dvh] w-full overflow-y-auto overscroll-contain rounded-t-2xl border border-[#E7DFD5] bg-[#FAF8F5] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[92vh] sm:max-w-5xl sm:rounded-3xl sm:p-8">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-black/60 backdrop-blur-sm motion-safe:animate-fade-in sm:items-center sm:p-6"
+          onClick={(e) => { if (e.target === e.currentTarget) setZoomedScreenshot(null); }}
+        >
+          <div role="dialog" aria-modal="true" aria-label="Aperçu du projet en plein écran" className="relative max-h-[100dvh] w-full overflow-y-auto overscroll-contain rounded-t-2xl border border-[#E7DFD5] bg-[#FAF8F5] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[92vh] sm:max-w-5xl sm:rounded-3xl sm:p-8">
             {/* Close button */}
             <button
+              ref={closeBtnRef}
               type="button"
+              aria-label="Fermer le plein écran"
               onClick={() => setZoomedScreenshot(null)}
-              className="sticky top-0 z-20 float-right grid h-10 w-10 place-items-center rounded-full bg-white text-[#7A6C5E] shadow-sm hover:text-[#2C2723] hover:bg-[#EFE9E0] border border-[#E8E1D5] transition-colors cursor-pointer sm:absolute sm:top-5 sm:right-5"
+              className="sticky top-0 z-20 float-right grid h-11 w-11 place-items-center rounded-full bg-white text-[#5C4D3E] shadow-sm hover:text-[#2C2723] hover:bg-[#EFE9E0] border border-[#E8E1D5] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A583E] focus-visible:ring-offset-2 sm:absolute sm:top-5 sm:right-5"
             >
               <X className="w-5 h-5" />
             </button>
